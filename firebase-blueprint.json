@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile document stored under users/{uid}",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "role": { "type": "string", "enum": ["provider", "receiver", "volunteer", "admin"] },
+        "accountStatus": { "type": "string", "enum": ["active", "pending", "suspended"] },
+        "contactInformation": { "type": "object" },
+        "location": { "type": "object" },
+        "preferredFoodTypes": { "type": "array" },
+        "capacityMeals": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "email", "role", "accountStatus"]
+    },
+    "FoodListing": {
+      "title": "FoodListing",
+      "description": "Surplus food listing posted by a provider",
+      "type": "object",
+      "properties": {
+        "listingId": { "type": "string", "maxLength": 128 },
+        "providerId": { "type": "string", "maxLength": 128 },
+        "providerName": { "type": "string", "maxLength": 150 },
+        "foodName": { "type": "string", "maxLength": 150 },
+        "foodType": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "quantity": { "type": "number" },
+        "quantityUnit": { "type": "string", "maxLength": 30 },
+        "pickupLocation": { "type": "string", "maxLength": 250 },
+        "preparationTime": { "type": "string" },
+        "availabilityDeadline": { "type": "string" },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "storageRequirement": { "type": "string", "maxLength": 50 },
+        "dietaryInfo": { "type": "array" },
+        "status": { "type": "string", "enum": ["available", "reserved", "completed", "closed", "cancelled", "expired"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["listingId", "providerId", "foodName", "foodType", "quantity", "quantityUnit", "pickupLocation", "status"]
+    },
+    "FoodRequest": {
+      "title": "FoodRequest",
+      "description": "Request submitted by a receiver for a surplus food listing",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "maxLength": 128 },
+        "listingId": { "type": "string", "maxLength": 128 },
+        "foodName": { "type": "string", "maxLength": 150 },
+        "providerId": { "type": "string", "maxLength": 128 },
+        "providerName": { "type": "string", "maxLength": 150 },
+        "receiverId": { "type": "string", "maxLength": 128 },
+        "receiverName": { "type": "string", "maxLength": 150 },
+        "requestedQuantity": { "type": "number" },
+        "quantityUnit": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "enum": ["requested", "accepted", "rejected", "picked_up", "distributed", "completed", "cancelled"] },
+        "note": { "type": "string", "maxLength": 500 },
+        "decisionAt": { "type": "string" },
+        "decisionNotes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["requestId", "listingId", "providerId", "receiverId", "requestedQuantity", "status"]
+    },
+    "PickupTask": {
+      "title": "PickupTask",
+      "description": "Volunteer food delivery and distribution task",
+      "type": "object",
+      "properties": {
+        "taskId": { "type": "string", "maxLength": 128 },
+        "requestId": { "type": "string", "maxLength": 128 },
+        "listingId": { "type": "string", "maxLength": 128 },
+        "foodName": { "type": "string", "maxLength": 150 },
+        "volunteerId": { "type": "string", "maxLength": 128 },
+        "volunteerName": { "type": "string", "maxLength": 150 },
+        "providerName": { "type": "string", "maxLength": 150 },
+        "receiverName": { "type": "string", "maxLength": 150 },
+        "quantity": { "type": "number" },
+        "quantityUnit": { "type": "string", "maxLength": 30 },
+        "pickupDetails": { "type": "object" },
+        "deliveryDetails": { "type": "object" },
+        "status": { "type": "string", "enum": ["unassigned", "accepted", "en_route_pickup", "picked_up", "en_route_delivery", "delivered", "completed", "cancelled"] },
+        "acceptedAt": { "type": "string" },
+        "pickedUpAt": { "type": "string" },
+        "deliveredAt": { "type": "string" },
+        "completedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["taskId", "requestId", "listingId", "pickupDetails", "deliveryDetails", "status"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app notifications for campus participants",
+      "type": "object",
+      "properties": {
+        "notificationId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "message": { "type": "string", "maxLength": 500 },
+        "type": { "type": "string", "maxLength": 50 },
+        "relatedRecordId": { "type": "string", "maxLength": 128 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["notificationId", "userId", "title", "message", "type", "isRead"]
+    },
+    "DistributionRecord": {
+      "title": "DistributionRecord",
+      "description": "Verified completed campus food distribution metrics",
+      "type": "object",
+      "properties": {
+        "distributionId": { "type": "string", "maxLength": 128 },
+        "listingId": { "type": "string", "maxLength": 128 },
+        "requestId": { "type": "string", "maxLength": 128 },
+        "providerId": { "type": "string", "maxLength": 128 },
+        "receiverId": { "type": "string", "maxLength": 128 },
+        "volunteerId": { "type": "string", "maxLength": 128 },
+        "foodName": { "type": "string", "maxLength": 150 },
+        "quantityDistributed": { "type": "number" },
+        "quantityUnit": { "type": "string", "maxLength": 30 },
+        "estimatedMeals": { "type": "number" },
+        "co2SavedKg": { "type": "number" },
+        "status": { "type": "string", "maxLength": 30 },
+        "completedAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["distributionId", "listingId", "requestId", "quantityDistributed", "quantityUnit", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Administrative audit event trail",
+      "type": "object",
+      "properties": {
+        "actorId": { "type": "string", "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 200 },
+        "actorRole": { "type": "string", "maxLength": 30 },
+        "action": { "type": "string", "maxLength": 100 },
+        "targetType": { "type": "string", "maxLength": 50 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["actorId", "action", "targetType", "targetId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents keyed by Firebase Authentication UID"
+    },
+    "/foodListings/{listingId}": {
+      "schema": "FoodListing",
+      "description": "Campus food surplus listings"
+    },
+    "/foodRequests/{requestId}": {
+      "schema": "FoodRequest",
+      "description": "Food requests submitted by receivers"
+    },
+    "/pickupTasks/{taskId}": {
+      "schema": "PickupTask",
+      "description": "Volunteer food pickup and delivery tasks"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "Campus user notification alerts"
+    },
+    "/distributionRecords/{distributionId}": {
+      "schema": "DistributionRecord",
+      "description": "Verified completed distribution records and sustainability metrics"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Administrative compliance audit logs"
+    }
+  }
+}

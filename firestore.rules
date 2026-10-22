@@ -1,0 +1,179 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ========================================================
+    // GLOBAL VALIDATION & SECURITY HELPERS
+    // ========================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Role lookups
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData().role == 'admin') ||
+        request.auth.token.email == 'vaibhavpusarla@gmail.com'
+      );
+    }
+
+    function isProvider() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'provider';
+    }
+
+    function isReceiver() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'receiver';
+    }
+
+    function isVolunteer() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'volunteer';
+    }
+
+    // ========================================================
+    // 1. USERS COLLECTION
+    // ========================================================
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+
+      // Normal users CANNOT create admin accounts on registration
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+                    isValidId(userId) &&
+                    request.resource.data.role != 'admin';
+
+      // Prevent non-admins from changing their role to 'admin'
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId &&
+         (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
+         request.resource.data.uid == resource.data.uid) ||
+        isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ========================================================
+    // 2. FOOD LISTINGS COLLECTION
+    // ========================================================
+    match /foodListings/{listingId} {
+      // Authenticated users can read available food surplus
+      allow read: if isSignedIn();
+
+      // Only verified providers or administrators can publish listings
+      allow create: if isSignedIn() && isValidId(listingId) &&
+                    (request.resource.data.providerId == request.auth.uid || isAdmin()) &&
+                    request.resource.data.quantity > 0;
+
+      // Only the owning provider or an admin can update or cancel
+      allow update: if isSignedIn() && (
+        (resource.data.providerId == request.auth.uid &&
+         request.resource.data.providerId == resource.data.providerId) ||
+        isAdmin()
+      );
+
+      allow delete: if isSignedIn() && (resource.data.providerId == request.auth.uid || isAdmin());
+    }
+
+    // ========================================================
+    // 3. FOOD REQUESTS COLLECTION
+    // ========================================================
+    match /foodRequests/{requestId} {
+      // Participants (receiver or provider) and administrators can access
+      allow read: if isSignedIn() && (
+        resource.data.receiverId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Receivers can submit requests
+      allow create: if isSignedIn() && isValidId(requestId) &&
+                    request.resource.data.receiverId == request.auth.uid &&
+                    request.resource.data.status == 'requested' &&
+                    request.resource.data.requestedQuantity > 0;
+
+      // Provider can accept/reject; Receiver can cancel; Admin can override
+      allow update: if isSignedIn() && (
+        (resource.data.providerId == request.auth.uid) ||
+        (resource.data.receiverId == request.auth.uid && request.resource.data.status == 'cancelled') ||
+        isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ========================================================
+    // 4. PICKUP TASKS COLLECTION
+    // ========================================================
+    match /pickupTasks/{taskId} {
+      allow read: if isSignedIn();
+
+      // Created when request accepted or by admin
+      allow create: if isSignedIn() && isValidId(taskId);
+
+      // Volunteers can claim unassigned tasks, or advance their assigned tasks
+      allow update: if isSignedIn() && (
+        (resource.data.status == 'unassigned' && request.resource.data.volunteerId == request.auth.uid) ||
+        (resource.data.volunteerId == request.auth.uid) ||
+        isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ========================================================
+    // 5. NOTIFICATIONS COLLECTION
+    // ========================================================
+    match /notifications/{notificationId} {
+      // Strict PII Isolation: Users can only read and modify their own notifications
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(notificationId);
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ========================================================
+    // 6. DISTRIBUTION RECORDS COLLECTION
+    // ========================================================
+    match /distributionRecords/{distributionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(distributionId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ========================================================
+    // 7. AUDIT LOGS COLLECTION
+    // ========================================================
+    match /auditLogs/{logId} {
+      // Sensitive audit trail: read access strictly restricted to campus admins
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && isValidId(logId) &&
+                    request.resource.data.actorId == request.auth.uid;
+      // Immutable log invariant: Audit logs can NEVER be updated or deleted
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "PlateConnect - Smart Surplus Food Matching & Distribution",
+  "description": "Smart surplus food matching and distribution management system for college campuses, connecting food providers, receivers, volunteers, and administrators with real-time Firebase backend.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isImageFile() {
+      return request.resource.contentType.matches('image/jpeg') ||
+             request.resource.contentType.matches('image/png') ||
+             request.resource.contentType.matches('image/webp');
+    }
+
+    function isUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Food listings image bucket
+    match /foodListings/{providerId}/{imageFile} {
+      // Public / authenticated campus users can view food surplus images
+      allow read: if isSignedIn();
+
+      // Only the authenticated provider can upload photos for their own listings
+      allow write: if isSignedIn() &&
+                   request.auth.uid == providerId &&
+                   isImageFile() &&
+                   isUnder5MB();
+
+      allow delete: if isSignedIn() && request.auth.uid == providerId;
+    }
+  }
+}
